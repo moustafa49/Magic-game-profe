@@ -2,148 +2,101 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>⚽ Magic Clubs Analyzer</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>لعبة الأندية الرمزية</title>
   <style>
-    body { background: #111; color: #fff; font-family: 'Tajawal', Arial, sans-serif; margin:0; padding:0;}
-    .container { max-width: 480px; margin: auto; padding: 16px;}
-    h1 {text-align:center; margin-bottom: 4px; font-size: 2em;}
-    h2 {text-align:center; color:#FFD600; margin-top:0; font-size: 1.2em;}
-    .clubs-grid {display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0;}
-    .club-btn {background:#222; border-radius: 22px; border:2px solid #282828; display:flex; flex-direction:column; align-items:center; padding:12px 0; cursor:pointer; transition:.18s; box-shadow:0 2px 6px #0007;}
-    .club-btn.selected {border:2px solid #FFD600;}
-    .club-btn img {width:54px; height:54px; margin-bottom:7px;}
-    .club-btn span {font-size:1em; margin:0;}
-    .bar {margin:16px 0 0 0;}
-    .notice {text-align:center; color:#FFD600; margin:12px 0; font-size: 1.1em;}
-    .error {color:#f33; font-size:1em;}
-    .action-btns {display:flex; gap:16px; justify-content:center; margin:18px 0;}
-    button {font-size:1.05em; border-radius:16px; border:none; background:#2444dd; color:#fff; padding:10px 22px; cursor:pointer; transition:0.2s; font-weight:bold;}
-    button:active {background:#153399;}
-    .result-bar {margin:12px 0; background:#222; border-radius:18px; min-height:38px; padding:7px 14px; text-align:center;}
-    .emoji {font-size:1.1em;}
-    .count {font-weight:bold; color:#FFD600;}
-    @media (max-width:480px) {
-      h1 {font-size:1.25em;}
-      .container {padding: 8px;}
-      .clubs-grid {gap: 9px;}
-      .club-btn img {width:40px; height:40px;}
+    body { background: #191919; color: #fff; font-family: 'Tajawal', Arial, sans-serif; text-align: center; margin: 0;}
+    h1 { margin: 30px 0 10px 0; color: #FFD600;}
+    .club-grid { display: grid; grid-template-columns: repeat(4, 90px); gap: 17px; justify-content: center; margin: 25px 0;}
+    .club-icon {
+      border-radius: 20px;
+      padding: 17px 0 7px 0;
+      background: #232323;
+      border: 3px solid transparent;
+      font-size: 2.1em;
+      font-weight: bold;
+      transition: 0.18s;
+      box-shadow: 0 4px 18px #0004;
+      cursor: pointer;
+      min-width: 70px;
+      min-height: 70px;
+      position: relative;
+    }
+    .club-icon.selected {
+      border: 3px solid #FFD600;
+      box-shadow: 0 0 8px #FFD60090;
+      background: #1a1a2d;
+    }
+    .club-name { font-size: 1em; display: block; margin-top: 6px;}
+    .bar, .best-bar { margin: 10px 0 0 0; font-size: 1.17em; }
+    .btn { padding: 9px 24px; border-radius: 10px; background: #FFD600; color: #222; font-weight: bold; border: none; margin: 12px 8px 0 8px; cursor: pointer;}
+    .btn:hover { background: #ffe25a; }
+    @media (max-width: 600px) {
+      .club-grid { grid-template-columns: repeat(2, 110px);}
+      .club-icon { font-size: 1.5em;}
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>⚽ Magic Game - لعبة الأندية الذكية</h1>
-    <h2>اختَر الأندية واضغط "أفضل ٤"</h2>
+  <h1>لعبة الأندية الرمزية</h1>
+  <div class="club-grid" id="clubs"></div>
+  <div class="bar" id="bar">(شريطك الحالي فارغ)</div>
+  <button class="btn" onclick="showBest()">✨ أفضل 4</button>
+  <button class="btn" onclick="clearBar()">مسح</button>
+  <div class="best-bar" id="best"></div>
+<script>
+const clubs = [
+  { name: "الهلال", symbol: "💙" },
+  { name: "الأهلي", symbol: "🦅" },
+  { name: "الرجاء", symbol: "🟢" },
+  { name: "النصر", symbol: "💛" },
+  { name: "جالاتا سراي", symbol: "⭐" },
+  { name: "الوداد", symbol: "🔴" },
+  { name: "العين", symbol: "👁️" },
+  { name: "السد", symbol: "🏰" }
+];
 
-    <div class="clubs-grid" id="clubsGrid"></div>
+let bar = [];
+const maxBar = 10;
 
-    <div class="bar">
-      <div>عدد الأندية في الشريط: <span id="barCount">0/10</span></div>
-      <div id="currentBar" style="margin-top:7px; min-height:32px;">شريطك الحالي: <span id="barClubs">(فارغ)</span></div>
-    </div>
-
-    <div class="notice" id="notice"></div>
-    <div class="error" id="error"></div>
-
-    <div class="action-btns">
-      <button id="analyzeBtn">✨ أفضل 4</button>
-      <button id="clearBtn" style="background:#333;color:#fff;">مسح</button>
-    </div>
-
-    <div class="result-bar" id="resultBar"></div>
-  </div>
-
-  <script>
-    // روابط صور الأندية (PNG بخلفية شفافة)
-    const clubsData = [
-      { name: 'الهلال', img: 'https://i.imgur.com/Vgu1kIH.png' },
-      { name: 'الأهلي', img: 'https://i.imgur.com/loRr2hP.png' },
-      { name: 'الرجاء', img: 'https://i.imgur.com/JrRtq4K.png' },
-      { name: 'النصر', img: 'https://i.imgur.com/NyQbB5w.png' },
-      { name: 'الاتحاد', img: 'https://i.imgur.com/PMn2Q2x.png' },
-      { name: 'الوداد', img: 'https://i.imgur.com/kKxnbeQ.png' },
-      { name: 'سراي', img: 'https://i.imgur.com/9QSh8dh.png' },
-      { name: 'الترجي', img: 'https://i.imgur.com/5m6g6zX.png' },
-      { name: 'السد', img: 'https://i.imgur.com/8PfKfVu.png' }
-    ];
-
-    let bar = [];
-
-    const clubsGrid = document.getElementById('clubsGrid');
-    const barClubs = document.getElementById('barClubs');
-    const barCount = document.getElementById('barCount');
-    const notice = document.getElementById('notice');
-    const error = document.getElementById('error');
-    const resultBar = document.getElementById('resultBar');
-
-    // رسم الأندية
-    clubsData.forEach((club, idx) => {
-      const div = document.createElement('div');
-      div.className = 'club-btn';
-      div.innerHTML = `<img src="${club.img}" alt="${club.name}"><span>${club.name}</span>`;
-      div.onclick = () => selectClub(idx);
-      clubsGrid.appendChild(div);
-    });
-
-    // اختيار نادي (يُسمح بالتكرار)
-    function selectClub(idx) {
-      if(bar.length >= 10) {
-        bar.shift(); // يحذف أقدم عنصر تلقائيًا
-      }
-      bar.push(idx);
-      updateBar();
-    }
-
-    // تحديث الشريط
-    function updateBar() {
-      barCount.textContent = `${bar.length}/10`;
-      barClubs.innerHTML = bar.length === 0 ? '(فارغ)' :
-        bar.map(i => `<img src="${clubsData[i].img}" alt="${clubsData[i].name}" class="emoji" style="width:30px;vertical-align:middle;">`).join(' ');
-      error.textContent = '';
-      notice.textContent = '';
-
-      if (bar.length >= 4) {
-        // تحليل نسبة الأندية السعودية (مثلاً) أو حسب النوع
-        let saudi = ['الهلال','النصر','الأهلي','الاتحاد'];
-        let saudiCount = bar.filter(i => saudi.includes(clubsData[i].name)).length;
-        if(saudiCount > 5) notice.textContent = '⚠️ لاحظ: الأندية السعودية نسبتها عالية!';
-      }
-    }
-
-    // مسح الشريط
-    document.getElementById('clearBtn').onclick = () => {
-      bar = [];
-      updateBar();
-      resultBar.innerHTML = '';
-    };
-
-    // أفضل 4 ترشيحات بناءً على الذكاء والترند
-    document.getElementById('analyzeBtn').onclick = () => {
-      if(bar.length < 4) {
-        error.textContent = 'أضف على الأقل ٤ أندية في الشريط!';
-        return;
-      }
-      error.textContent = '';
-      // احصائيات التكرار
-      let freq = {};
-      bar.forEach(i => freq[i] = (freq[i] || 0) + 1);
-
-      // اختار الأعلى تكرارًا (ثم توازن التوزيع)
-      let sorted = Object.entries(freq).sort((a,b)=>b[1]-a[1]);
-      let top4 = sorted.slice(0,4).map(([i,_]) => parseInt(i));
-      // لو فيه تساوي أو نقص في تنوع الأندية، يزود عشوائي ذكي
-      if(top4.length < 4) {
-        let rest = clubsData.map((_,i)=>i).filter(i=>!top4.includes(i));
-        while(top4.length < 4) top4.push(rest.shift());
-      }
-
-      // عرض النتيجة
-      let out = top4.map(i => `×<span class="count">${freq[i]||1}</span> <img src="${clubsData[i].img}" alt="${clubsData[i].name}" class="emoji" style="width:28px;vertical-align:middle;">`).join(' ');
-      resultBar.innerHTML = `ترند أفضل ٤: ${out}`;
-    };
-
-    updateBar();
-  </script>
+function renderClubs() {
+  document.getElementById('clubs').innerHTML = clubs.map((club, i) =>
+    `<div class="club-icon${bar.includes(i) ? ' selected' : ''}" onclick="selectClub(${i})" style="color:${getColor(i)}">${club.symbol}<span class="club-name">${club.name}</span></div>`
+  ).join('');
+}
+function selectClub(i) {
+  if (bar.length < maxBar) {
+    bar.push(i);
+  } else {
+    bar.shift();
+    bar.push(i);
+  }
+  renderClubs();
+  renderBar();
+}
+function getColor(i) {
+  // ألوان مميزة لكل نادي
+  return ["#0af", "#e32", "#1a5", "#fd0", "#e44", "#f22", "#7bf", "#bbb"][i];
+}
+function renderBar() {
+  document.getElementById('bar').innerHTML = "شريطك الحالي: " +
+    (bar.length ? bar.map(i => `${clubs[i].symbol} ${clubs[i].name}`).join(' | ') : "(فارغ)");
+  document.getElementById('best').innerHTML = "";
+}
+function showBest() {
+  if (!bar.length) return;
+  let freq = {};
+  bar.forEach(i => freq[i] = (freq[i]||0)+1);
+  let best = Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,4)
+    .map(([i,c])=>`${clubs[i].symbol} ${clubs[i].name} ×${c}`).join(" | ");
+  document.getElementById('best').innerHTML = "أفضل 4: " + best;
+}
+function clearBar() {
+  bar = [];
+  renderBar();
+  renderClubs();
+}
+renderClubs();
+renderBar();
+</script>
 </body>
 </html>
