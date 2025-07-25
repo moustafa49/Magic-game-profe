@@ -2,145 +2,148 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>🔥 لعبة الأندية - حلل الترند!</title>
+  <title>⚽ Magic Clubs Analyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { background: #111; color: #fff; font-family: 'Cairo', Arial, sans-serif; text-align: center; }
-    h1 { color: gold; font-size: 2.2em; margin-bottom: 0.2em; }
-    .clubs { display: flex; flex-wrap: wrap; justify-content: center; margin: 18px 0 8px 0; }
-    .club-btn {
-      width: 90px; height: 110px; margin: 10px;
-      border-radius: 20px; border: 2px solid #222; background: #232323;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      cursor: pointer; transition: 0.2s; box-shadow: 0 1px 10px #0005;
-    }
-    .club-btn.selected { border: 2.5px solid #ffd700; box-shadow: 0 0 12px #ffd70090; }
-    .club-btn img { width: 56px; height: 56px; margin-bottom: 5px; }
-    .club-btn span { margin-top: 3px; font-size: 1.03em; color: #fffc; }
-    .strip, .notifications, .trend { margin: 12px 0; }
-    .strip { font-size: 1.25em; }
-    .notifications { color: orange; font-size: 1.1em; }
-    .trend { color: #00e2ff; font-weight: bold; font-size: 1.08em; }
-    .actions { margin: 16px 0; }
-    .btn { background: #0072ff; color: #fff; border: none; border-radius: 12px; padding: 10px 23px; font-size: 1.08em; margin: 0 8px; cursor: pointer; }
-    .btn:active { background: #0050b3; }
-    .best-strip { margin: 13px 0 5px 0; color: #fff; font-size: 1.1em; }
-    @media (max-width: 600px) {
-      .club-btn { width: 85px; height: 95px; }
-      .club-btn img { width: 44px; height: 44px; }
+    body { background: #111; color: #fff; font-family: 'Tajawal', Arial, sans-serif; margin:0; padding:0;}
+    .container { max-width: 480px; margin: auto; padding: 16px;}
+    h1 {text-align:center; margin-bottom: 4px; font-size: 2em;}
+    h2 {text-align:center; color:#FFD600; margin-top:0; font-size: 1.2em;}
+    .clubs-grid {display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 20px 0;}
+    .club-btn {background:#222; border-radius: 22px; border:2px solid #282828; display:flex; flex-direction:column; align-items:center; padding:12px 0; cursor:pointer; transition:.18s; box-shadow:0 2px 6px #0007;}
+    .club-btn.selected {border:2px solid #FFD600;}
+    .club-btn img {width:54px; height:54px; margin-bottom:7px;}
+    .club-btn span {font-size:1em; margin:0;}
+    .bar {margin:16px 0 0 0;}
+    .notice {text-align:center; color:#FFD600; margin:12px 0; font-size: 1.1em;}
+    .error {color:#f33; font-size:1em;}
+    .action-btns {display:flex; gap:16px; justify-content:center; margin:18px 0;}
+    button {font-size:1.05em; border-radius:16px; border:none; background:#2444dd; color:#fff; padding:10px 22px; cursor:pointer; transition:0.2s; font-weight:bold;}
+    button:active {background:#153399;}
+    .result-bar {margin:12px 0; background:#222; border-radius:18px; min-height:38px; padding:7px 14px; text-align:center;}
+    .emoji {font-size:1.1em;}
+    .count {font-weight:bold; color:#FFD600;}
+    @media (max-width:480px) {
+      h1 {font-size:1.25em;}
+      .container {padding: 8px;}
+      .clubs-grid {gap: 9px;}
+      .club-btn img {width:40px; height:40px;}
     }
   </style>
 </head>
 <body>
-  <h1>🏆 لعبة الأندية ... وحلل الترند!</h1>
-  <div class="clubs" id="clubs"></div>
+  <div class="container">
+    <h1>⚽ Magic Game - لعبة الأندية الذكية</h1>
+    <h2>اختَر الأندية واضغط "أفضل ٤"</h2>
 
-  <div class="strip" id="stripInfo">عدد الأندية في الشريط: <span id="stripCount">0/10</span></div>
-  <div class="strip">شريطك الحالي: <span id="stripList">(فارغ)</span></div>
-  <div class="notifications" id="notify"></div>
-  <div class="trend" id="trend"></div>
-  <div class="actions">
-    <button class="btn" onclick="calcBest()">✨ أفضل 4</button>
-    <button class="btn" onclick="resetStrip()">مسح</button>
+    <div class="clubs-grid" id="clubsGrid"></div>
+
+    <div class="bar">
+      <div>عدد الأندية في الشريط: <span id="barCount">0/10</span></div>
+      <div id="currentBar" style="margin-top:7px; min-height:32px;">شريطك الحالي: <span id="barClubs">(فارغ)</span></div>
+    </div>
+
+    <div class="notice" id="notice"></div>
+    <div class="error" id="error"></div>
+
+    <div class="action-btns">
+      <button id="analyzeBtn">✨ أفضل 4</button>
+      <button id="clearBtn" style="background:#333;color:#fff;">مسح</button>
+    </div>
+
+    <div class="result-bar" id="resultBar"></div>
   </div>
-  <div class="best-strip" id="bestStrip"></div>
 
-<script>
-// بيانات الأندية وصورهم (روابط مضمونة)
-const clubs = [
-  { name: 'الهلال', img: 'https://upload.wikimedia.org/wikipedia/ar/2/2e/Al-Hilal_FC_logo.png' },
-  { name: 'الأهلي', img: 'https://upload.wikimedia.org/wikipedia/ar/1/12/AlAhlySC.png' },
-  { name: 'الرجاء', img: 'https://upload.wikimedia.org/wikipedia/ar/6/6c/Raja_Club_Athletic_crest.png' },
-  { name: 'النصر', img: 'https://upload.wikimedia.org/wikipedia/ar/6/60/Al-Nassr_FC_logo.png' },
-  { name: 'الاتحاد', img: 'https://upload.wikimedia.org/wikipedia/ar/3/32/Al-Ittihad_logo.png' },
-  { name: 'الوداد', img: 'https://upload.wikimedia.org/wikipedia/ar/d/d8/Wydad_AC_logo.png' },
-  { name: 'النجم', img: 'https://upload.wikimedia.org/wikipedia/ar/3/32/Etoile_Sportive_du_Sahel_logo.png' },
-  { name: 'السد', img: 'https://upload.wikimedia.org/wikipedia/ar/5/56/Al-Sadd_SC_logo.png' },
-];
+  <script>
+    // روابط صور الأندية (PNG بخلفية شفافة)
+    const clubsData = [
+      { name: 'الهلال', img: 'https://i.imgur.com/Vgu1kIH.png' },
+      { name: 'الأهلي', img: 'https://i.imgur.com/loRr2hP.png' },
+      { name: 'الرجاء', img: 'https://i.imgur.com/JrRtq4K.png' },
+      { name: 'النصر', img: 'https://i.imgur.com/NyQbB5w.png' },
+      { name: 'الاتحاد', img: 'https://i.imgur.com/PMn2Q2x.png' },
+      { name: 'الوداد', img: 'https://i.imgur.com/kKxnbeQ.png' },
+      { name: 'سراي', img: 'https://i.imgur.com/9QSh8dh.png' },
+      { name: 'الترجي', img: 'https://i.imgur.com/5m6g6zX.png' },
+      { name: 'السد', img: 'https://i.imgur.com/8PfKfVu.png' }
+    ];
 
-let strip = [];
-const maxStrip = 10;
+    let bar = [];
 
-function renderClubs() {
-  let html = '';
-  clubs.forEach((club, i) => {
-    html += `
-      <div class="club-btn" id="club${i}" onclick="selectClub(${i})">
-        <img src="${club.img}" alt="${club.name}" />
-        <span>${club.name}</span>
-      </div>`;
-  });
-  document.getElementById('clubs').innerHTML = html;
-}
+    const clubsGrid = document.getElementById('clubsGrid');
+    const barClubs = document.getElementById('barClubs');
+    const barCount = document.getElementById('barCount');
+    const notice = document.getElementById('notice');
+    const error = document.getElementById('error');
+    const resultBar = document.getElementById('resultBar');
 
-function selectClub(idx) {
-  if (strip.length >= maxStrip) {
-    // شريط ممتلئ، احذف أول عنصر وأضف الجديد (سلوك الشريط المتحرك)
-    strip.shift();
-  }
-  strip.push(idx);
-  renderStrip();
-}
+    // رسم الأندية
+    clubsData.forEach((club, idx) => {
+      const div = document.createElement('div');
+      div.className = 'club-btn';
+      div.innerHTML = `<img src="${club.img}" alt="${club.name}"><span>${club.name}</span>`;
+      div.onclick = () => selectClub(idx);
+      clubsGrid.appendChild(div);
+    });
 
-function renderStrip() {
-  // ترتيب الشريط الأخير (مع التكرار)
-  let stripClubs = strip.map(i => clubs[i].name);
-  let stripIcons = strip.map(i => `<img src="${clubs[i].img}" alt="" style="width:30px;vertical-align:middle">`);
-  document.getElementById('stripCount').textContent = strip.length + '/10';
-  document.getElementById('stripList').innerHTML = strip.length === 0 ? '(فارغ)' : stripIcons.join(' ');
-  // أظهر الـ selected
-  for (let i = 0; i < clubs.length; i++) {
-    let btn = document.getElementById('club' + i);
-    if (btn) btn.classList.remove('selected');
-  }
-  if (strip.length > 0) {
-    let last = strip[strip.length - 1];
-    let btn = document.getElementById('club' + last);
-    if (btn) btn.classList.add('selected');
-  }
-  updateNotify();
-  document.getElementById('bestStrip').innerHTML = '';
-}
+    // اختيار نادي (يُسمح بالتكرار)
+    function selectClub(idx) {
+      if(bar.length >= 10) {
+        bar.shift(); // يحذف أقدم عنصر تلقائيًا
+      }
+      bar.push(idx);
+      updateBar();
+    }
 
-function resetStrip() {
-  strip = [];
-  renderStrip();
-  document.getElementById('trend').textContent = '';
-  document.getElementById('bestStrip').textContent = '';
-}
+    // تحديث الشريط
+    function updateBar() {
+      barCount.textContent = `${bar.length}/10`;
+      barClubs.innerHTML = bar.length === 0 ? '(فارغ)' :
+        bar.map(i => `<img src="${clubsData[i].img}" alt="${clubsData[i].name}" class="emoji" style="width:30px;vertical-align:middle;">`).join(' ');
+      error.textContent = '';
+      notice.textContent = '';
 
-function calcBest() {
-  if (strip.length === 0) {
-    document.getElementById('bestStrip').textContent = 'اختَر أندية أولاً!';
-    return;
-  }
-  // احسب التكرارات في الشريط
-  let counts = {};
-  for (let idx of strip) {
-    counts[idx] = (counts[idx] || 0) + 1;
-  }
-  // أفضل 4 بالترتيب حسب الأكثر تكراراً
-  let best = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4)
-    .map(([i, c]) => `${c}× <img src="${clubs[i].img}" alt="" style="width:27px;vertical-align:middle"> ${clubs[i].name}`)
-    .join(' &nbsp; ');
-  document.getElementById('bestStrip').innerHTML = 'ترند أفضل 4: ' + best;
-}
+      if (bar.length >= 4) {
+        // تحليل نسبة الأندية السعودية (مثلاً) أو حسب النوع
+        let saudi = ['الهلال','النصر','الأهلي','الاتحاد'];
+        let saudiCount = bar.filter(i => saudi.includes(clubsData[i].name)).length;
+        if(saudiCount > 5) notice.textContent = '⚠️ لاحظ: الأندية السعودية نسبتها عالية!';
+      }
+    }
 
-function updateNotify() {
-  // توازن بين الأندية العربية (شمال أفريقيا) والسعودية/قطر
-  let african = [1,2,5]; // الأهلي، الرجاء، الوداد، النجم (6) - النجم (6) ممكن تعتبرها تونسية أو خارج المجموعة
-  let saudi = [0,3,4,7]; // الهلال، النصر، الاتحاد، السد
-  let africanCount = strip.filter(i => african.includes(i)).length;
-  let saudiCount = strip.filter(i => saudi.includes(i)).length;
-  let notify = '';
-  if (africanCount > saudiCount + 2) notify = '⚠️ الأندية العربية أعلى من الخليجية!';
-  else if (saudiCount > africanCount + 2) notify = '⚠️ أندية السعودية وقطر أعلى من العربية!';
-  document.getElementById('notify').textContent = notify;
-}
+    // مسح الشريط
+    document.getElementById('clearBtn').onclick = () => {
+      bar = [];
+      updateBar();
+      resultBar.innerHTML = '';
+    };
 
-renderClubs();
-renderStrip();
-</script>
+    // أفضل 4 ترشيحات بناءً على الذكاء والترند
+    document.getElementById('analyzeBtn').onclick = () => {
+      if(bar.length < 4) {
+        error.textContent = 'أضف على الأقل ٤ أندية في الشريط!';
+        return;
+      }
+      error.textContent = '';
+      // احصائيات التكرار
+      let freq = {};
+      bar.forEach(i => freq[i] = (freq[i] || 0) + 1);
+
+      // اختار الأعلى تكرارًا (ثم توازن التوزيع)
+      let sorted = Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+      let top4 = sorted.slice(0,4).map(([i,_]) => parseInt(i));
+      // لو فيه تساوي أو نقص في تنوع الأندية، يزود عشوائي ذكي
+      if(top4.length < 4) {
+        let rest = clubsData.map((_,i)=>i).filter(i=>!top4.includes(i));
+        while(top4.length < 4) top4.push(rest.shift());
+      }
+
+      // عرض النتيجة
+      let out = top4.map(i => `×<span class="count">${freq[i]||1}</span> <img src="${clubsData[i].img}" alt="${clubsData[i].name}" class="emoji" style="width:28px;vertical-align:middle;">`).join(' ');
+      resultBar.innerHTML = `ترند أفضل ٤: ${out}`;
+    };
+
+    updateBar();
+  </script>
 </body>
 </html>
