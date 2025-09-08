@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Greedy Cat Max — Ultimate (ذاكرة 300 & صدّ الجعفلة)</title>
+<style>
+:root{
+  --bg:#071018; --panel:#0b1416; --accent:#ffd548;
+  --meat:#ff6b6b; --veg:#6fe08a; --ext:#4fc3f7; --muted:#9fb0bb; --text:#e9f2f5;
+  --danger:#ffb86b;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family: "Cairo", Tahoma, Arial, sans-serif;background:linear-gradient(180deg,var(--bg),#021018);color:var(--text);padding:12px}
+h1{margin:6px 0 12px;color:var(--accent);text-align:center;font-size:1.3rem}
+.container{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 460px;gap:14px}
+.panel{background:var(--panel);border-radius:12px;padding:12px;box-shadow:0 8px 30px #0008}
+.grid{display:grid;grid-template-columns:repeat(4,86px);gap:12px;justify-content:center}
+.item{background:#081217;border-radius:10px;padding:10px;cursor:pointer;border:2px solid transparent;text-align:center;font-size:1.6rem;height:86px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.item.selected{border-color:var(--accent);box-shadow:0 8px 26px #ffd54822}
+.hot-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:8px}
+.hot{padding:8px 10px;border-radius:9px;background:#071216;border:2px solid transparent;cursor:pointer}
+.hot.active{border-color:#ff9800;box-shadow:0 8px 18px #ff980030}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{padding:6px 10px;border-radius:8px;background:#07161a;color:var(--muted);font-weight:700}
+.chip.meat{border:1px solid rgba(255,107,107,0.12);color:var(--meat)}
+.chip.veg{border:1px solid rgba(111,224,138,0.12);color:var(--veg)}
+.chip.ext{border:1px solid rgba(79,195,247,0.12);color:var(--ext)}
+.btn{background:var(--accent);border:none;padding:9px 12px;border-radius:8px;color:#081217;font-weight:800;cursor:pointer}
+.ghost{background:transparent;border:1px solid #123;padding:8px 10px;color:var(--muted);border-radius:8px;cursor:pointer}
+.small{font-size:.92rem;color:var(--muted)}
+.title{font-weight:800;color:var(--accent);margin-bottom:8px}
+.bar{height:10px;border-radius:8px;background:#061216;margin-top:6px;overflow:hidden}
+.bar-inner{height:100%}
+.warning{color:var(--danger);font-weight:800}
+.danger{color:#ff8a65;font-weight:900}
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+.stat{background:#07171a;padding:8px;border-radius:8px;min-width:120px;text-align:center}
+.right-col{display:flex;flex-direction:column;gap:12px}
+@media(max-width:980px){.container{grid-template-columns:1fr}.grid{grid-template-columns:repeat(4,92px)}}
+</style>
+</head>
+<body>
+<h1>Greedy Cat Max — Ultimate Edition (ذاكرة 300 & صدّ الجعفلة)</h1>
+
+<div class="container">
+  <!-- اليسار: أدوات اللعب -->
+  <div class="panel">
+    <div class="title">تحكم سريع</div>
+    <div class="hot-row" id="hotRow" title="اضغط لتشغيل/إيقاف Hot"></div>
+
+    <div class="grid" id="grid"></div>
+
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:10px">
+      <button class="btn" id="autoBtn">🔮 توقع تلقائي</button>
+      <button class="ghost" id="clearBtn">🗑️ مسح الذاكرة</button>
+      <button class="ghost" id="exportBtn">📥 تصدير</button>
+      <button class="ghost" id="importBtn">📤 استيراد</button>
+    </div>
+
+    <div style="margin-top:12px">
+      <div class="title">الشريط الحالي (آخر 10)</div>
+      <div id="currentBar" class="row"></div>
+      <div class="small" id="countInfo">الذاكرة: 0 / 300</div>
+    </div>
+  </div>
+
+  <!-- اليمين: تحليلات ونتائج -->
+  <div class="right-col">
+    <div class="panel">
+      <div class="title">ملخص ذكي & إنذارات</div>
+      <div class="row">
+        <div class="stat"><div class="small">الموجة</div><div id="waveInfo">-</div></div>
+        <div class="stat"><div class="small">تضليل</div><div id="trickInfo">—</div></div>
+        <div class="stat"><div class="small">Hot</div><div id="hotInfo">—</div></div>
+      </div>
+      <div style="margin-top:10px">
+        <div id="earlyAlert" class="warning"></div>
+        <div id="strongAlert" class="danger" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="title">أفضل 5 — مع نسبة الثقة</div>
+      <div id="top5List"></div>
+      <div id="top5Bar" style="margin-top:8px"></div>
+      <div id="balanceNote" class="small" style="margin-top:8px"></div>
+    </div>
+
+    <div class="panel">
+      <div class="title">بدائل ذكية (2) & توقع المفاجأة</div>
+      <div id="alternatives" class="row"></div>
+      <div id="surprise" style="margin-top:8px"></div>
+    </div>
+
+    <div class="panel">
+      <div class="title">إحصائيات (آخر 300)</div>
+      <div id="statsArea" class="small"></div>
+      <div style="margin-top:8px" class="small muted">تستطيع تصدير/استيراد الذاكرة عبر الأزرار أعلى.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================
+   إعداد الأصناف والرفاق
+   ===================== */
+const meats = [
+  {emoji:'🐔', name:'دجاج'}, {emoji:'🐑', name:'غنم'},
+  {emoji:'🐟', name:'سمك'}, {emoji:'🦐', name:'جمبري'}
+];
+const veggies = [
+  {emoji:'🥕', name:'جزر'}, {emoji:'🌽', name:'ذرة'},
+  {emoji:'🍅', name:'طماطم'}, {emoji:'🌶️', name:'فلفل'}
+];
+const allItems = meats.concat(veggies);
+const all = allItems.map(i=>i.emoji);
+
+const companions = {
+  '🐔':['🐟','🐑'],'🐟':['🦐','🐔'],'🐑':['🐔','🐟'],'🦐':['🐟','🐔'],
+  '🥕':['🌽','🍅'],'🌽':['🥕','🌶️'],'🍅':['🥕','🌶️'],'🌶️':['🍅','🌽']
+};
+
+/* ================
+   الإعدادات والذاكرة
+   ================ */
+const MEMORY_MAX = 300;
+let memory = JSON.parse(localStorage.getItem('gc_ultimate_memory') || '[]');
+if(!Array.isArray(memory)) memory = [];
+let hotManual = JSON.parse(localStorage.getItem('gc_ultimate_hot') || '{}');
+if(!hotManual) hotManual = {};
+
+/* DOM */
+const grid = document.getElementById('grid');
+const hotRow = document.getElementById('hotRow');
+const currentBar = document.getElementById('currentBar');
+const countInfo = document.getElementById('countInfo');
+const top5List = document.getElementById('top5List');
+const alternativesDiv = document.getElementById('alternatives');
+const surpriseDiv = document.getElementById('surprise');
+const waveInfo = document.getElementById('waveInfo');
+const trickInfo = document.getElementById('trickInfo');
+const hotInfo = document.getElementById('hotInfo');
+const earlyAlert = document.getElementById('earlyAlert');
+const strongAlert = document.getElementById('strongAlert');
+const top5Bar = document.getElementById('top5Bar');
+const balanceNote = document.getElementById('balanceNote');
+const statsArea = document.getElementById('statsArea');
+
+const autoBtn = document.getElementById('autoBtn');
+const clearBtn = document.getElementById('clearBtn');
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+
+/* ======= رسم الواجهة ======= */
+function renderGrid(){
+  grid.innerHTML='';
+  all.forEach(e=>{
+    const it = allItems.find(x=>x.emoji===e);
+    const d = document.createElement('div');
+    d.className='item';
+    d.innerHTML = `<div style="font-size:1.3rem">${e}</div><div class="small">${it.name}</div>`;
+    d.onclick = ()=> pushChoice(e);
+    grid.appendChild(d);
+  });
+}
+function renderHotRow(){
+  hotRow.innerHTML='';
+  all.forEach(e=>{
+    const d = document.createElement('div');
+    d.className = 'hot' + (hotManual[e] ? ' active' : '');
+    d.textContent = e;
+    d.onclick = ()=>{
+      hotManual[e] = !hotManual[e];
+      localStorage.setItem('gc_ultimate_hot', JSON.stringify(hotManual));
+      renderHotRow(); updateAll();
+    };
+    hotRow.appendChild(d);
+  });
+}
+
+/* ============= وظائف الذاكرة ============= */
+function pushChoice(e){
+  memory.push({emoji:e, t:Date.now()});
+  if(memory.length>MEMORY_MAX) memory = memory.slice(-MEMORY_MAX);
+  localStorage.setItem('gc_ultimate_memory', JSON.stringify(memory));
+  updateAll();
+}
+function clearMemory(){
+  if(!confirm('مسح الذاكرة بالكامل؟')) return;
+  memory = []; localStorage.removeItem('gc_ultimate_memory');
+  hotManual = {}; localStorage.removeItem('gc_ultimate_hot');
+  renderHotRow(); updateAll();
+}
+
+/* ===== أدوات تحليل ===== */
+function lastN(n){ return memory.slice(-n).map(m=>m.emoji); }
+function countMemory(){
+  const c={};
+  memory.forEach(m=> c[m.emoji] = (c[m.emoji]||0)+1);
+  return c;
+}
+function isMeat(e){ return meats.some(m=>m.emoji===e); }
+function isVeg(e){ return veggies.some(v=>v.emoji===e); }
+function getName(e){ const it = allItems.find(i=>i.emoji===e); return it?it.name:''; }
+
+/* Wave analysis (آخر 12) */
+function analyzeWave(){
+  const arr = lastN(12);
+  if(arr.length===0) return {type:null, len:0};
+  let curType = isMeat(arr[0]) ? 'meat' : 'veg';
+  let curLen=1, maxLen=1, maxType=curType;
+  for(let i=1;i<arr.length;i++){
+    const t = isMeat(arr[i]) ? 'meat' : 'veg';
+    if(t===curType){ curLen++; if(curLen>maxLen){ maxLen=curLen; maxType=curType; } }
+    else { curType=t; curLen=1; }
+  }
+  return {type:maxType, len:maxLen};
+}
+
+/* كشف تضليل: آخر 3 من نفس النوع => تضليل ممكن */
+function detectTrick(){
+  const arr = lastN(3);
+  if(arr.length<3) return {trick:false, reason:''};
+  const same = arr.every(x=> isMeat(x) === isMeat(arr[0]));
+  if(same) return {trick:true, reason: isMeat(arr[0]) ? 'سلسلة لحوم قصيرة (ربما تضليل)' : 'سلسلة خضار قصيرة (ربما تضليل)'};
+  return {trick:false, reason:''};
+}
+
+/* مؤشر مبكر للجعفلة (من أول 3 متتالية) + مستويات */
+function detectEarlyFraud(counts){
+  // نبحث عن أي عنصر ظهر متتاليًا k مرات مؤخراً داخل آخر 10
+  const arr = lastN(10);
+  if(arr.length===0) return {level:0, emoji:null, message:''};
+  // احسب أطول تسلسل متتالي لآخر عنصر
+  const last = arr[arr.length-1];
+  let seq=1;
+  for(let i=arr.length-2;i>=0;i--){
+    if(arr[i]===last) seq++; else break;
+  }
+  // Levels: seq>=3 -> تحذير مبكر; seq>=5 -> عالي; seq>=7 -> خطير
+  if(seq>=7) return {level:3, emoji:last, message:`🚨 خطر جعفلة قوي: ${last} متكرر ${seq} مرات متتابعة`};
+  if(seq>=5) return {level:2, emoji:last, message:`⚠️ جعفلة عالية: ${last} متكرر ${seq} مرات`};
+  if(seq>=3) return {level:1, emoji:last, message:`🔄 تحذير مبكر: ${last} متكرر ${seq} مرات متتالية`};
+  return {level:0, emoji:null, message:''};
+}
+
+/* حساب درجات وثقة لكل صنف */
+function computeScores(){
+  const counts = countMemory(); // absolute counts in memory
+  // lastIndex: خطوات منذ آخر ظهور (0 = آخر عنصر)
+  const lastIndex = {};
+  all.forEach(e=> lastIndex[e] = -1);
+  for(let i=memory.length-1;i>=0;i--){
+    const em = memory[i].emoji;
+    if(lastIndex[em]===-1) lastIndex[em] = memory.length-1 - i;
+  }
+  all.forEach(e=>{ if(lastIndex[e]===-1) lastIndex[e] = 999; }); // غائب طويل
+  // raw score composition
+  const raw = {};
+  all.forEach(e=>{
+    let s = 0;
+    // تكرار مهم
+    s += (counts[e] || 0) * 12;
+    // Hot يدوي قوي
+    s += (hotManual[e] ? 120 : 0);
+    // حداثة: كلما ظهر قريبًا زاد
+    const rec = lastIndex[e];
+    if(rec < 999) s += Math.max(0, 40 - rec); else s += 6;
+    // غياب طويل يعطى دفعة صغيرة (للمفاجأة)
+    if(lastIndex[e] >= 20) s += 18;
+    raw[e] = s;
+  });
+  // منع/تقليل الاشياء المتكررة بشدة (جعفلة موقوفة او تقلل)
+  // لو صنف تكرر >= 10 داخل الذاكرة => نخفض وزنه
+  Object.entries(counts).forEach(([e,c])=>{
+    if(c >= 10) raw[e] = Math.floor(raw[e] * 0.35); // نخفض بشدة
+    else if(c >= 7) raw[e] = Math.floor(raw[e] * 0.6); // نخفض
+  });
+  // normalize -> confidence %
+  const total = Object.values(raw).reduce((a,b)=>a+b,0) || 1;
+  const conf = {};
+  all.forEach(e=>{
+    conf[e] = Math.round((raw[e]/total)*100);
+  });
+  return {raw, conf, counts, lastIndex};
+}
+
+/* اختيار Top5 ذكي مع توازن مرن */
+function computeTop5(){
+  const {raw, conf, counts, lastIndex} = computeScores();
+  const sorted = all.slice().sort((a,b)=> conf[b] - conf[a] );
+  // معرفة الموجة
+  const wave = analyzeWave();
+  const waveStrong = wave.len >= 4;
+  // حساب إجمالي تكرار لأنواع
+  const meatTotal = all.filter(isMeat).reduce((s,e)=> s + (counts[e]||0), 0);
+  const vegTotal  = all.filter(isVeg).reduce((s,e)=> s + (counts[e]||0), 0);
+  let prefer = null;
+  if(vegTotal > meatTotal) prefer='veg';
+  else if(meatTotal > vegTotal) prefer='meat';
+  else prefer = wave.type || (isVeg(sorted[0]) ? 'veg' : 'meat');
+
+  // قاعدة اختيار: عادة 3+2، وإذا موجة قوية جداً نسمح 4+1
+  const pickBy = (type, n, exclude=[])=>{
+    return sorted.filter(e=> (type==='meat'?isMeat(e):isVeg(e)) && !exclude.includes(e)).slice(0,n);
+  };
+
+  let top5 = [];
+  if(prefer==='veg'){
+    top5 = pickBy('veg',3).concat(pickBy('meat',2));
+    if(waveStrong && (conf[top5[0]] - conf[top5[3]] > 18)){
+      const alt = pickBy('veg',4).concat(pickBy('meat',1));
+      if(alt.length>=5) top5 = alt.slice(0,5);
+    }
+  } else {
+    top5 = pickBy('meat',3).concat(pickBy('veg',2));
+    if(waveStrong && (conf[top5[0]] - conf[top5[3]] > 18)){
+      const alt = pickBy('meat',4).concat(pickBy('veg',1));
+      if(alt.length>=5) top5 = alt.slice(0,5);
+    }
+  }
+  // ضمان الطول 5
+  const used = new Set(top5);
+  for(const e of sorted){ if(top5.length>=5) break; if(!used.has(e)) top5.push(e); }
+
+  // بدائل ذكية: 1- مضاد للتضليل، 2- رفيق Hot أو underdog
+  const alternatives = [];
+  const trick = detectTrick();
+  if(trick.trick){
+    const last = lastN(1)[0];
+    const oppositeType = isMeat(last) ? 'veg' : 'meat';
+    const opp = sorted.find(e=> (oppositeType==='meat'?isMeat(e):isVeg(e)));
+    if(opp) alternatives.push(opp);
+  }
+  // companion for first Hot
+  const hotList = Object.keys(hotManual).filter(k=>hotManual[k]);
+  if(hotList.length){
+    const cands = companions[hotList[0]] || [];
+    cands.forEach(c=>{ if(alternatives.length<2 && !alternatives.includes(c)) alternatives.push(c); });
+  }
+  // fill from underdogs (least counts)
+  const least = all.slice().sort((a,b)=> (counts[a]||0) - (counts[b]||0));
+  for(const e of least){
+    if(alternatives.length>=2) break;
+    if(!top5.includes(e) && !alternatives.includes(e)) alternatives.push(e);
+  }
+
+  // early fraud detection (based on detectEarlyFraud)
+  const early = detectEarlyFraud(counts);
+
+  return {top5, alternatives, conf, raw, counts, lastIndex, wave, trick, early};
+}
+
+/* ============ تحديث الواجهة ============ */
+function updateAll(){
+  // current bar (last 10)
+  const last10 = lastN(10);
+  currentBar.innerHTML = last10.length ? last10.map(e=>`<span class="chip ${isMeat(e)?'meat':'veg'}">${e} ${getName(e)}</span>`).join(' ') : '<span class="small">فارغ</span>';
+  countInfo.textContent = `${memory.length} / ${MEMORY_MAX}`;
+
+  // hot info
+  const hotList = Object.keys(hotManual).filter(k=>hotManual[k]);
+  document.getElementById('hotInfo').textContent = hotList.length ? hotList.join(' ') : '—';
+
+  // compute
+  const {top5, alternatives, conf, raw, counts, lastIndex, wave, trick, early} = computeTop5();
+
+  // top5 render with confidence bars
+  top5List.innerHTML = top5.map(e=>{
+    const type = isMeat(e)?'meat':'veg';
+    const name = getName(e);
+    const percent = conf[e] || 0;
+    const width = Math.max(6, percent);
+    return `<div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><span class="chip ${type}">${e} ${name}</span></div>
+        <div><strong>${percent}%</strong></div>
+      </div>
+      <div class="bar"><div class="bar-inner" style="width:${width}%;background:${type==='meat'?'var(--meat)':'var(--veg)'}"></div></div>
+    </div>`;
+  }).join('');
+
+  top5Bar.innerHTML = top5.map(e=>`${e} ${getName(e)} (${conf[e]}%)`).join('  ');
+
+  // alternatives
+  alternativesDiv.innerHTML = alternatives.length ? alternatives.map(e=>`<span class="chip ext">${e} ${getName(e)}</span>`).join(' ') : '<span class="small">لا يوجد</span>';
+
+  // surprise: prioritized missing (long gap) OR underdog
+  const missing = Object.entries(lastIndex).filter(([e,idx])=> idx>=25 ).map(x=>x[0]);
+  let surpriseText = '';
+  if(missing.length){
+    surpriseText = `🎯 توقع مفاجأة (غائب طويل): <span class="chip ext">${missing[0]} ${getName(missing[0])}</span>`;
+  } else {
+    const leastByCount = Object.entries(counts).sort((a,b)=>a[1]-b[1]).map(x=>x[0]);
+    if(leastByCount.length) surpriseText = `🎯 توقع مفاجأة: <span class="chip ext">${leastByCount[0]} ${getName(leastByCount[0])}</span>`;
+    else surpriseText = `🎯 توقع مفاجأة: <span class="chip ext">${top5[top5.length-1]} ${getName(top5[top5.length-1])}</span>`;
+  }
+  surpriseDiv.innerHTML = surpriseText;
+
+  // wave & trick
+  waveInfo.textContent = wave.type ? `${wave.type==='veg'?'موجة خضار':'موجة لحوم'} بطول ${wave.len}` : '-';
+  trickInfo.textContent = trick.trick ? trick.reason : 'لا يوجد تضليل واضح';
+
+  // early fraud alerts
+  if(early.level>=3){
+    strongAlert.textContent = early.message;
+    earlyAlert.textContent = '';
+  } else {
+    strongAlert.textContent = '';
+    earlyAlert.textContent = early.level>=1 ? early.message : '';
+  }
+
+  // balance note
+  const meatTotal = all.filter(isMeat).reduce((s,e)=> s + (counts[e]||0), 0);
+  const vegTotal  = all.filter(isVeg).reduce((s,e)=> s + (counts[e]||0), 0);
+  balanceNote.textContent = `توزيع تاريخي: خضار ${vegTotal} — لحوم ${meatTotal}.`;
+
+  // stats area
+  const freqList = all.map(e=> `${e}×${counts[e]||0}`).join(' | ');
+  statsArea.innerHTML = `<div>تكرارات: ${freqList}</div><div style="margin-top:6px">آخر ظهور (خطوات منذ آخر): ${all.map(e=> `${e}:${lastIndex[e]===999? 'غائب': lastIndex[e]}`).join(' | ')}</div>`;
+
+  // save hot
+  localStorage.setItem('gc_ultimate_hot', JSON.stringify(hotManual));
+}
+
+/* ========= أزرار وظيفية ========= */
+autoBtn.onclick = ()=>{
+  const {top5} = computeTop5();
+  // نضيف كل top5 كـ اختيارات سريعة (تحاكي لعب ذكي)
+  top5.forEach(e=>{
+    memory.push({emoji:e, t:Date.now()});
+    if(memory.length>MEMORY_MAX) memory = memory.slice(-MEMORY_MAX);
+  });
+  localStorage.setItem('gc_ultimate_memory', JSON.stringify(memory));
+  updateAll();
+};
+clearBtn.onclick = clearMemory;
+
+exportBtn.onclick = ()=>{
+  const data = {memory, hotManual, exportedAt: new Date().toISOString()};
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'greedycat-ultimate-export.json'; a.click(); URL.revokeObjectURL(url);
+};
+
+importBtn.onclick = ()=>{
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='application/json';
+  inp.onchange = (ev)=>{
+    const file = ev.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const data = JSON.parse(e.target.result);
+        if(Array.isArray(data.memory)) memory = data.memory.slice(-MEMORY_MAX);
+        if(data.hotManual) hotManual = data.hotManual;
+        localStorage.setItem('gc_ultimate_memory', JSON.stringify(memory));
+        localStorage.setItem('gc_ultimate_hot', JSON.stringify(hotManual));
+        renderHotRow(); updateAll();
+        alert('استيراد ناجح!');
+      }catch(err){ alert('ملف غير صالح'); }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+};
+
+/* ======= مساعدة اسم الصنف ======= */
+function getName(e){ const it = allItems.find(x=>x.emoji===e); return it?it.name:''; }
+
+/* ====== تهيئة ====== */
+renderGrid(); renderHotRow(); updateAll();
+
+/* نصيحة: لو عايز تغيّر حساسية الكشف (مثل thresholds)، قولّي أعدلها فورًا. */
+</script>
+</body>
+</html>
